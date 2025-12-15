@@ -1,0 +1,5 @@
+ivy-cache/*
+!ivy-cache/.gitkeep
+
+data/*
+!data/.gitkeep
