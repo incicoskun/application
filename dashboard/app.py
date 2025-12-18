@@ -8,16 +8,13 @@ from cassandra.cluster import Cluster
 # Sayfa Ayarları
 st.set_page_config(page_title="NASA Log Analizi (Kappa Architecture)", layout="wide")
 
-st.title("NASA Web Server Log Analizi (Spark Aggregated)")
-st.markdown(
-    "Bu dashboard, istatistikleri doğrudan **Spark Streaming** tarafından hesaplanan tablolardan çeker."
-)
+st.title("NASA Web Server Log Analizi")
 
 
 # Cassandra Bağlantısı
 @st.cache_resource
 def get_session():
-    cluster = Cluster(["cassandra"])  # Docker servis adı
+    cluster = Cluster(["cassandra"])
     session = cluster.connect("nasa_logs")
     return session
 
@@ -56,7 +53,6 @@ while True:
         # ==========================================
         # 2. ZAMAN SERİSİ İÇİN HAM VERİ (logs_raw)
         # ==========================================
-        # Akış grafiği için hala ham veriye ihtiyacımız var (son 2000 satır yeterli)
         rows_raw = session.execute("SELECT log_time FROM logs_raw LIMIT 2000")
         df_raw = pd.DataFrame(list(rows_raw))
 
@@ -66,7 +62,6 @@ while True:
 
         if not df_endpoint.empty and not df_ip.empty:
             # --- ENDPOINT İŞLEME ---
-            # Spark 'append' ettiği için aynı endpoint'ten birden fazla satır olabilir. Bunları topluyoruz (SUM).
             endpoint_summary = (
                 df_endpoint.groupby("endpoint")["count"].sum().reset_index()
             )
@@ -84,8 +79,8 @@ while True:
             )
 
             # --- KPI HESAPLAMA ---
-            total_requests = endpoint_summary["count"].sum()  # Toplam istek sayısı
-            unique_ips = len(ip_summary)  # Kaç farklı IP var
+            total_requests = endpoint_summary["count"].sum()
+            unique_ips = len(ip_summary)
 
             # Hata Oranı Hesabı
             errors = status_summary[status_summary["status_code"] >= 400]["count"].sum()
@@ -132,13 +127,12 @@ while True:
                 status_summary,
                 values="count",
                 names="status_code",
-                title="HTTP Status Dağılımı (Spark Tablosundan)",
+                title="HTTP Status Dağılımı",
                 hole=0.4,
             )
             row3_col1.plotly_chart(fig_status, use_container_width=True)
 
             # --- GRAFİK 4: ZAMAN SERİSİ (Ham Veri) ---
-            # Akışın canlılığını göstermek için bunu ham tablodan yapıyoruz
             if not df_raw.empty:
                 df_raw["time_sec"] = pd.to_datetime(df_raw["log_time"]).dt.floor("S")
                 time_series = (
