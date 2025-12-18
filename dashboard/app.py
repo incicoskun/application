@@ -30,38 +30,27 @@ placeholder = st.empty()
 
 while True:
     try:
-        # ==========================================
-        # 1. SPARK TARAFINDAN HESAPLANAN VERİLER
-        # ==========================================
-
-        # A) ENDPOINT İSTATİSTİKLERİ (requests_by_endpoint tablosundan)
+        # spark data pull
         rows_endpoint = session.execute(
             "SELECT endpoint, count FROM requests_by_endpoint"
         )
         df_endpoint = pd.DataFrame(list(rows_endpoint))
 
-        # B) IP İSTATİSTİKLERİ (requests_by_ip tablosundan)
         rows_ip = session.execute("SELECT ip_address, count FROM requests_by_ip")
         df_ip = pd.DataFrame(list(rows_ip))
 
-        # C) STATUS İSTATİSTİKLERİ (requests_by_status tablosundan)
         rows_status = session.execute(
             "SELECT status_code, count FROM requests_by_status"
         )
         df_status = pd.DataFrame(list(rows_status))
 
-        # ==========================================
-        # 2. ZAMAN SERİSİ İÇİN HAM VERİ (logs_raw)
-        # ==========================================
+        # raw log
         rows_raw = session.execute("SELECT log_time FROM logs_raw LIMIT 2000")
         df_raw = pd.DataFrame(list(rows_raw))
 
-        # ==========================================
-        # 3. VERİ İŞLEME VE GÖRSELLEŞTİRME
-        # ==========================================
-
+        # veri işleme kısımları
         if not df_endpoint.empty and not df_ip.empty:
-            # --- ENDPOINT İŞLEME ---
+            # endpoint
             endpoint_summary = (
                 df_endpoint.groupby("endpoint")["count"].sum().reset_index()
             )
@@ -69,24 +58,24 @@ while True:
                 by="count", ascending=False
             ).head(10)
 
-            # --- IP İŞLEME ---
+            # ip
             ip_summary = df_ip.groupby("ip_address")["count"].sum().reset_index()
             top_ips = ip_summary.sort_values(by="count", ascending=False).head(10)
 
-            # --- STATUS İŞLEME ---
+            # status
             status_summary = (
                 df_status.groupby("status_code")["count"].sum().reset_index()
             )
 
-            # --- KPI HESAPLAMA ---
+            # kpi calc
             total_requests = endpoint_summary["count"].sum()
             unique_ips = len(ip_summary)
 
-            # Hata Oranı Hesabı
+            # error_rate
             errors = status_summary[status_summary["status_code"] >= 400]["count"].sum()
             error_rate = (errors / total_requests * 100) if total_requests > 0 else 0
 
-            # --- KPI KARTLARI ---
+            # kpi
             with kpi1:
                 st.metric("Toplam İstek (Spark)", f"{total_requests:,}")
             with kpi2:
@@ -94,7 +83,7 @@ while True:
             with kpi3:
                 st.metric("Hata Oranı", f"%{error_rate:.2f}")
 
-            # --- GRAFİK 1: TOP 10 ENDPOINTS (Spark Verisi) ---
+            # top 10 endpoint graph
             top_endpoints.columns = ["Endpoint", "Count"]
             fig_endpoint = px.bar(
                 top_endpoints,
@@ -108,7 +97,7 @@ while True:
             fig_endpoint.update_layout(yaxis=dict(autorange="reversed"))
             row2_col1.plotly_chart(fig_endpoint, use_container_width=True)
 
-            # --- GRAFİK 2: TOP 10 IP (Spark Verisi) ---
+            # top 10 ip graph
             top_ips.columns = ["IP Address", "Count"]
             fig_ip = px.bar(
                 top_ips,
@@ -122,7 +111,7 @@ while True:
             fig_ip.update_layout(yaxis=dict(autorange="reversed"))
             row2_col2.plotly_chart(fig_ip, use_container_width=True)
 
-            # --- GRAFİK 3: HTTP STATUS (Spark Verisi) ---
+            # http graph
             fig_status = px.pie(
                 status_summary,
                 values="count",
@@ -132,7 +121,7 @@ while True:
             )
             row3_col1.plotly_chart(fig_status, use_container_width=True)
 
-            # --- GRAFİK 4: ZAMAN SERİSİ (Ham Veri) ---
+            # time raw log
             if not df_raw.empty:
                 df_raw["time_sec"] = pd.to_datetime(df_raw["log_time"]).dt.floor("S")
                 time_series = (
