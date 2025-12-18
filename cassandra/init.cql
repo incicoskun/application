@@ -4,18 +4,24 @@ WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 USE nasa_logs;
 
 CREATE TABLE IF NOT EXISTS requests_by_endpoint (
-    endpoint text PRIMARY KEY,
-    count counter
+    log_time timestamp,
+    endpoint text,
+    count int,
+    PRIMARY KEY (log_time, endpoint)
 );
 
 CREATE TABLE IF NOT EXISTS requests_by_status (
-    status_code int PRIMARY KEY,
-    count counter
+    log_time timestamp,
+    status_code int,
+    count int,
+    PRIMARY KEY (log_time, status_code)
 );
 
 CREATE TABLE IF NOT EXISTS requests_by_ip (
-    ip_address text PRIMARY KEY,
-    count counter
+    log_time timestamp,
+    ip_address text,
+    count int,
+    PRIMARY KEY (log_time, ip_address)
 );
 
 CREATE TABLE IF NOT EXISTS logs_raw (
